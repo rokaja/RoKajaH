@@ -8,9 +8,20 @@
     body { font-family:-apple-system, system-ui; margin:0; background:#0b0b0b; color:#fff; }
     .wrap { max-width:520px; margin:0 auto; padding:20px; display:grid; gap:12px; }
     .card { background:#151515; border-radius:18px; padding:16px; }
-    input, textarea { width:100%; padding:12px; border-radius:12px; border:1px solid #333; background:#0f0f0f; color:#fff; }
-    button { width:100%; padding:12px 14px; border:0; border-radius:14px; background:#fff; color:#000; font-weight:700; }
+    input, textarea {
+      width:100%;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid #333;
+      background:#0f0f0f;
+      color:#fff;
+      box-sizing:border-box;
+    }
+    button { width:100%; padding:12px 14px; border:0; border-radius:14px; background:#fff; color:#000; font-weight:700; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
     .muted { color:#bdbdbd; font-size:13px; }
+    .row { display:flex; gap:10px; align-items:center; }
+    .pill { background:#222; border-radius:999px; padding:6px 10px; font-size:12px; }
   </style>
 </head>
 <body>
@@ -25,12 +36,21 @@
     </div>
 
     <div class="card">
-      <h2 style="margin:0 0 10px;">Pošlji sporočilo njej</h2>
+      <h2 style="margin:0 0 10px;">Novo sporočilo</h2>
+
       <textarea id="text" rows="4" placeholder="Napiši sporočilo…"></textarea>
+
       <input id="image" placeholder="URL slike (opcijsko)" style="margin-top:8px;" />
+
+      <input id="file" type="file" accept="image/*" style="margin-top:8px;" />
+      <div class="muted" style="margin-top:6px;">
+        (Če izbereš datoteko, jo naložim v Supabase Storage bucket <span class="pill">slike</span> in URL shranim sam.)
+      </div>
+
       <label class="muted" style="display:block; margin-top:10px;">
-        <input type="checkbox" id="pinned" checked /> Naj bo “pinned” (prikaži prvo)
+        <input type="checkbox" id="pinned" checked /> Naj bo pinned (prikaži zgoraj)
       </label>
+
       <div style="height:10px;"></div>
       <button id="send">Objavi sporočilo</button>
       <div class="muted" id="sent" style="margin-top:10px;"></div>
@@ -48,41 +68,103 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = "https://kkubtbbdokccfxaxmwgy.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdWJ0YmJkb2tjY2Z4YXhtd2d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjU2NzQsImV4cCI6MjA4NTU0MTY3NH0.37AC9ilA3qKI-UyH2Tgs0XJTm3R7J2f8XFkRfUHzrR4";
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdWJ0YmJkb2tjY2Z4YXhtd2d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjU2NzQsImV4cCI6MjA4NTU0MTY3NH0.37AC9ilA3qKI-UyH2Tgs0XJTm3R7J2f8XFkRfUHzrR4";
+
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const status = (t)=>document.getElementById("status").textContent=t;
-    const sent = (t)=>document.getElementById("sent").textContent=t;
-    const bStatus = (t)=>document.getElementById("bStatus").textContent=t;
+    const statusEl = document.getElementById("status");
+    const sentEl = document.getElementById("sent");
+    const bStatusEl = document.getElementById("bStatus");
 
-    document.getElementById("login").onclick = async () => {
+    const loginBtn = document.getElementById("login");
+    const sendBtn = document.getElementById("send");
+
+    function status(t){ statusEl.textContent = t; }
+    function sent(t){ sentEl.textContent = t; }
+    function bStatus(t){ bStatusEl.textContent = t; }
+
+    async function uploadImageToSupabase(file){
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const filename = `${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
+      const path = `messages/${filename}`;
+
+      const { error: upErr } = await sb.storage
+        .from("slike")
+        .upload(path, file, { upsert: false, cacheControl: "3600" });
+
+      if (upErr) throw upErr;
+
+      const { data } = sb.storage.from("slike").getPublicUrl(path);
+      return data.publicUrl;
+    }
+
+    loginBtn.onclick = async () => {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("pass").value;
+
       const { error } = await sb.auth.signInWithPassword({ email, password });
       status(error ? ("Napaka: " + error.message) : "Prijavljen ✅");
     };
 
-    document.getElementById("send").onclick = async () => {
+    sendBtn.onclick = async () => {
+      sent("");
+      sendBtn.disabled = true;
+
       const text = document.getElementById("text").value.trim();
-      const image_url = document.getElementById("image").value.trim() || null;
       const pinned = document.getElementById("pinned").checked;
 
-      if(!text){ sent("Manjka tekst."); return; }
+      if(!text){
+        sent("Manjka tekst.");
+        sendBtn.disabled = false;
+        return;
+      }
 
-      // opcijsko: odpinaj stare pinned
+      // image: najprej ročni URL, potem (če je izbrana datoteka) upload prevlada
+      let image_url = document.getElementById("image").value.trim() || null;
+
+      const fileEl = document.getElementById("file");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try {
+          sent("Nalagam sliko…");
+          image_url = await uploadImageToSupabase(fileEl.files[0]);
+        } catch (e) {
+          console.error(e);
+          sent("Napaka pri uploadu slike: " + (e.message || e));
+          sendBtn.disabled = false;
+          return;
+        }
+      }
+
+      // če pinned, odpni stare pinned (da je vedno samo eno “glavno”)
       if(pinned){
-        await sb.from("messages").update({ pinned:false }).eq("pinned", true);
+        const { error: unpinErr } = await sb.from("messages").update({ pinned:false }).eq("pinned", true);
+        if(unpinErr) console.error("Unpin error:", unpinErr);
       }
 
       const { error } = await sb.from("messages").insert({ text, image_url, pinned });
-      sent(error ? ("Napaka: " + error.message) : "Objavljeno ✅");
+
+      if(error){
+        console.error(error);
+        sent("Napaka: " + error.message);
+      } else {
+        sent("Objavljeno ✅");
+        document.getElementById("text").value = "";
+        document.getElementById("image").value = "";
+        if (fileEl) fileEl.value = "";
+      }
+
+      sendBtn.disabled = false;
     };
 
     document.getElementById("addBucket").onclick = async () => {
       const title = document.getElementById("bucketTitle").value.trim();
       if(!title){ bStatus("Manjka naslov."); return; }
+
       const { error } = await sb.from("bucket").insert({ title, done:false });
       bStatus(error ? ("Napaka: " + error.message) : "Dodano ✅");
+
+      if(!error) document.getElementById("bucketTitle").value = "";
     };
   </script>
 </body>
