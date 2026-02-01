@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="sl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin ❤️</title>
+  <style>
+    body { font-family:-apple-system, system-ui; margin:0; background:#0b0b0b; color:#fff; }
+    .wrap { max-width:520px; margin:0 auto; padding:20px; display:grid; gap:12px; }
+    .card { background:#151515; border-radius:18px; padding:16px; }
+    input, textarea { width:100%; padding:12px; border-radius:12px; border:1px solid #333; background:#0f0f0f; color:#fff; }
+    button { width:100%; padding:12px 14px; border:0; border-radius:14px; background:#fff; color:#000; font-weight:700; }
+    .muted { color:#bdbdbd; font-size:13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2 style="margin:0 0 10px;">Prijava</h2>
+      <input id="email" placeholder="email" />
+      <input id="pass" type="password" placeholder="geslo" style="margin-top:8px;" />
+      <div style="height:10px;"></div>
+      <button id="login">Login</button>
+      <div class="muted" id="status" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px;">Pošlji sporočilo njej</h2>
+      <textarea id="text" rows="4" placeholder="Napiši sporočilo…"></textarea>
+      <input id="image" placeholder="URL slike (opcijsko)" style="margin-top:8px;" />
+      <label class="muted" style="display:block; margin-top:10px;">
+        <input type="checkbox" id="pinned" checked /> Naj bo “pinned” (prikaži prvo)
+      </label>
+      <div style="height:10px;"></div>
+      <button id="send">Objavi sporočilo</button>
+      <div class="muted" id="sent" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px;">Dodaj bucket item</h2>
+      <input id="bucketTitle" placeholder="npr. Roadtrip do morja" />
+      <div style="height:10px;"></div>
+      <button id="addBucket">Dodaj</button>
+      <div class="muted" id="bStatus" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "PASTE_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "PASTE_SUPABASE_ANON_KEY";
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const status = (t)=>document.getElementById("status").textContent=t;
+    const sent = (t)=>document.getElementById("sent").textContent=t;
+    const bStatus = (t)=>document.getElementById("bStatus").textContent=t;
+
+    document.getElementById("login").onclick = async () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("pass").value;
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      status(error ? ("Napaka: " + error.message) : "Prijavljen ✅");
+    };
+
+    document.getElementById("send").onclick = async () => {
+      const text = document.getElementById("text").value.trim();
+      const image_url = document.getElementById("image").value.trim() || null;
+      const pinned = document.getElementById("pinned").checked;
+
+      if(!text){ sent("Manjka tekst."); return; }
+
+      // opcijsko: odpinaj stare pinned
+      if(pinned){
+        await sb.from("messages").update({ pinned:false }).eq("pinned", true);
+      }
+
+      const { error } = await sb.from("messages").insert({ text, image_url, pinned });
+      sent(error ? ("Napaka: " + error.message) : "Objavljeno ✅");
+    };
+
+    document.getElementById("addBucket").onclick = async () => {
+      const title = document.getElementById("bucketTitle").value.trim();
+      if(!title){ bStatus("Manjka naslov."); return; }
+      const { error } = await sb.from("bucket").insert({ title, done:false });
+      bStatus(error ? ("Napaka: " + error.message) : "Dodano ✅");
+    };
+  </script>
+</body>
+</html>
