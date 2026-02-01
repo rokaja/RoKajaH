@@ -3,56 +3,68 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>❤️ Za <NJENO_IME></title>
+  <title>❤️ Za njo</title>
+
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#111111">
+
   <style>
     body { font-family: -apple-system, system-ui; margin: 0; background:#0b0b0b; color:#fff; }
-    .wrap { max-width: 520px; margin: 0 auto; padding: 20px; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 20px; display:grid; gap: 12px; }
     .card { background:#151515; border-radius: 18px; padding: 16px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
     button { width: 100%; padding: 12px 14px; border:0; border-radius: 14px; background:#ffffff; color:#000; font-weight:600; }
     img { width:100%; border-radius: 16px; margin-top: 12px; }
     .muted { color:#bdbdbd; }
-    .grid { display:grid; gap:12px; }
-    .row { display:flex; justify-content:space-between; gap:12px; }
+    .row { display:flex; justify-content:space-between; gap:12px; align-items:center; }
     .chip { background:#222; padding:8px 10px; border-radius: 999px; font-size: 13px; color:#ddd; }
     .list { margin:0; padding-left: 18px; }
-    a { color:#fff; }
   </style>
 </head>
+
 <body>
-  <div class="wrap grid">
+  <div class="wrap">
     <div class="card">
       <div class="row">
         <div class="chip" id="counter">…</div>
         <div class="chip muted" id="today">…</div>
       </div>
+
       <h2 style="margin:14px 0 8px;">Danes zate ❤️</h2>
+
       <div id="message" style="font-size:18px; line-height:1.4;">Nalagam…</div>
-      <img id="img" style="display:none;" />
+      <img id="img" style="display:none;" alt="slika" />
+
       <div style="height:12px"></div>
       <button id="btnRandom">Daj mi še eno ✨</button>
-      <div class="muted" style="margin-top:10px; font-size:13px;">Če te imam rada/ljubim, je to še vedno premalo 🙂</div>
+
+      <div class="muted" style="margin-top:10px; font-size:13px;">
+        Če to bereš: ja, še vedno mislim nate 🙂
+      </div>
     </div>
 
     <div class="card">
       <h3 style="margin:0 0 10px;">Bucket list 🧺</h3>
       <ul id="bucket" class="list"></ul>
-      <div class="muted" style="font-size:13px;">(Dodajava stvari v adminu)</div>
+      <div class="muted" style="font-size:13px;">(Stvari dodajava v adminu)</div>
     </div>
 
     <div class="muted" style="font-size:12px; text-align:center;">
-      Tip: Dodaj na domači zaslon → Share → “Add to Home Screen”
+      Tip: Safari → Share → “Add to Home Screen”
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    // 1) VNESI SVOJE PODATKE
-    const SUPABASE_URL = "https://kkubtbbdokccfxaxmwgy.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdWJ0YmJkb2tjY2Z4YXhtd2d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjU2NzQsImV4cCI6MjA4NTU0MTY3NH0.37AC9ilA3qKI-UyH2Tgs0XJTm3R7J2f8XFkRfUHzrR4";
-    const RELATIONSHIP_START = "2025-05-02";
 
+  <script>
+    // ====== NASTAVITVE ======
+    const SUPABASE_URL = "https://kkubtbbdokccfxaxmwgy.supabase.co";
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdWJ0YmJkb2tjY2Z4YXhtd2d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjU2NzQsImV4cCI6MjA4NTU0MTY3NH0.37AC9ilA3qKI-UyH2Tgs0XJTm3R7J2f8XFkRfUHzrR4";
+
+    // Nastavi vajin datum (YYYY-MM-DD)
+    const RELATIONSHIP_START = "2023-06-01";
+
+    // ====== INIT ======
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const $msg = document.getElementById("message");
@@ -60,80 +72,149 @@
     const $bucket = document.getElementById("bucket");
 
     function setImage(url){
-      if(url){
+      if(url && url.trim().length > 0){
         $img.src = url;
         $img.style.display = "block";
       } else {
         $img.style.display = "none";
+        $img.removeAttribute("src");
       }
+    }
+
+    function escapeHtml(str){
+      return (str ?? "").replace(/[&<>"']/g, m => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[m]));
     }
 
     function formatCounter(start){
       const s = new Date(start + "T00:00:00");
       const now = new Date();
+
       let years = now.getFullYear() - s.getFullYear();
       let months = now.getMonth() - s.getMonth();
       let days = now.getDate() - s.getDate();
 
       if (days < 0) {
         months -= 1;
-        const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
-        days += prevMonth;
+        const prevMonthDays = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+        days += prevMonthDays;
       }
-      if (months < 0) { years -= 1; months += 12; }
+      if (months < 0) {
+        years -= 1;
+        months += 12;
+      }
 
-      const totalDays = Math.floor((now - s) / (1000*60*60*24));
-      return `${years} let • ${months} mesecev • ${days} dni  (skupaj ${totalDays} dni)`;
+      const totalDays = Math.floor((now - s) / (1000 * 60 * 60 * 24));
+      return `${years} let • ${months} mesecev • ${days} dni (skupaj ${totalDays} dni)`;
     }
 
     async function loadBucket(){
-      const { data, error } = await sb.from("bucket").select("*").order("created_at", {ascending:true});
-      if(error){ $bucket.innerHTML = "<li>Napaka pri nalaganju</li>"; return; }
-      $bucket.innerHTML = data.map(x => `<li>${x.done ? "✅" : "⬜️"} ${escapeHtml(x.title)}</li>`).join("");
+      const { data, error } = await sb
+        .from("bucket")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if(error){
+        console.error("Bucket load error:", error);
+        $bucket.innerHTML = "<li>Napaka pri nalaganju bucket lista.</li>";
+        return;
+      }
+
+      if(!data || data.length === 0){
+        $bucket.innerHTML = "<li>(Zaenkrat prazno)</li>";
+        return;
+      }
+
+      $bucket.innerHTML = data
+        .map(x => `<li>${x.done ? "✅" : "⬜️"} ${escapeHtml(x.title)}</li>`)
+        .join("");
     }
 
-    function escapeHtml(str){
-      return (str ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
+    async function loadMessageDailyOrPinned() {
+      // 1) pinned (najbolj svež)
+      const { data: pinnedData, error: pinnedError } = await sb
+        .from("messages")
+        .select("*")
+        .eq("pinned", true)
+        .order("created_at", { ascending: false });
 
-    async function loadMessageDailyOrPinned(){
-      // 1) Če obstaja pinned (tvoje “poslano” sporočilo), pokaži najnovejše pinned
-      const pinned = await sb.from("messages").select("*").eq("pinned", true).order("created_at", {ascending:false}).limit(1);
-      if(pinned.data && pinned.data.length){
-        const m = pinned.data[0];
-        $msg.textContent = m.text;
+      if (pinnedError) {
+        console.error("Pinned load error:", pinnedError);
+      }
+
+      if (pinnedData && pinnedData.length > 0) {
+        const m = pinnedData[0];
+        $msg.textContent = m.text ?? "";
         setImage(m.image_url);
         return;
       }
 
-      // 2) sicer daily: izračun indeks glede na datum
-      const { data, error } = await sb.from("messages").select("*").order("created_at", {ascending:true});
-      if(error || !data?.length){ $msg.textContent = "Še ni sporočil 🙂"; return; }
+      // 2) daily fallback
+      const { data, error } = await sb
+        .from("messages")
+        .select("*")
+        .order("created_at", { ascending: true });
 
-      const dayIndex = Math.floor((Date.now()/86400000)) % data.length;
+      if (error) {
+        console.error("Messages load error:", error);
+        $msg.textContent = "Napaka pri nalaganju sporočil.";
+        setImage(null);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        $msg.textContent = "Še ni sporočil 🙂";
+        setImage(null);
+        return;
+      }
+
+      const dayIndex = Math.floor(Date.now() / 86400000) % data.length;
       const m = data[dayIndex];
-      $msg.textContent = m.text;
+      $msg.textContent = m.text ?? "";
       setImage(m.image_url);
     }
 
     async function randomMessage(){
       const { data, error } = await sb.from("messages").select("*");
-      if(error || !data?.length) return;
+      if(error){
+        console.error("Random load error:", error);
+        return;
+      }
+      if(!data || data.length === 0) return;
+
       const m = data[Math.floor(Math.random() * data.length)];
-      $msg.textContent = m.text;
+      $msg.textContent = m.text ?? "";
       setImage(m.image_url);
     }
 
     document.getElementById("btnRandom").addEventListener("click", randomMessage);
 
-    // init
+    function enableRealtime(){
+      sb.channel("realtime-messages")
+        .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => {
+          loadMessageDailyOrPinned();
+        })
+        .subscribe();
+
+      sb.channel("realtime-bucket")
+        .on("postgres_changes", { event: "*", schema: "public", table: "bucket" }, () => {
+          loadBucket();
+        })
+        .subscribe();
+    }
+
+    // ====== RUN ======
     document.getElementById("counter").textContent = formatCounter(RELATIONSHIP_START);
     document.getElementById("today").textContent = new Date().toLocaleDateString("sl-SI");
 
     loadMessageDailyOrPinned();
     loadBucket();
+    enableRealtime();
 
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(err => console.warn("SW error:", err));
+    }
   </script>
 </body>
 </html>
