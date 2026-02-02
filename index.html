@@ -37,7 +37,6 @@
       color:var(--text);
       overflow-x:hidden;
 
-      /* Smooth background: več slojev, brez ostre “črte” */
       background:
         radial-gradient(900px 650px at 18% 12%, rgba(255,92,138,.25), transparent 62%),
         radial-gradient(850px 650px at 85% 0%, rgba(178,107,255,.20), transparent 62%),
@@ -211,6 +210,34 @@
       color: rgba(255,255,255,.92);
     }
 
+    /* Button: več ljubezni */
+    .love-btn{
+      border: 1px solid rgba(255,255,255,.16);
+      background: linear-gradient(135deg, rgba(255,92,138,.22), rgba(178,107,255,.16));
+      color: rgba(255,255,255,.95);
+      border-radius: 16px;
+      padding: 11px 12px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .6px;
+      cursor: pointer;
+      width: fit-content;
+    }
+    .love-btn:active{ transform: scale(.99); }
+
+    .love-extra{
+      margin-top: 10px;
+      padding: 12px 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      color: rgba(255,255,255,.92);
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+      display:none;
+    }
+
     /* Bucket list */
     .bucket{
       padding:0;
@@ -309,9 +336,9 @@
     }
     .history-date-bottom{
       margin-top: 10px;
-      padding-top: 6px;
-      font-size: 11.5px;
-      color: rgba(255,255,255,.45);
+      padding-top: 7px;
+      font-size: 12.8px;
+      color: rgba(255,255,255,.52);
       text-align: right;
       border-top: 1px dashed rgba(255,255,255,.08);
     }
@@ -358,11 +385,9 @@
 
 <body>
   <div class="wrap">
-    <!-- HERO -->
     <div class="glass hero">
       <div class="toprow">
         <div class="brand">
-          <!-- uporabi isto sliko kot ikono appa -->
           <img src="icon-192.png" class="logo-img" alt="R&K">
           <div class="title">
             <h1>R&K</h1>
@@ -377,7 +402,6 @@
       </div>
     </div>
 
-    <!-- MAIN MESSAGE -->
     <div class="glass main">
       <div class="headline">
         <h2>Samo zate, Kaja ❤️</h2>
@@ -389,13 +413,14 @@
       <div id="imgWrap" class="imgWrap fadeIn">
         <img id="img" alt="slika" />
       </div>
+
+      <button id="moreLoveBtn" class="love-btn" type="button">VEČ LJUBEZNI</button>
+      <div id="loveExtra" class="love-extra"></div>
     </div>
 
-    <!-- TWO COL GRID -->
     <div class="grid2">
-      <!-- BUCKET -->
       <div class="glass card">
-        <h3>Bucket list 🧺</h3>
+        <h3>Bucket list 🧺 ✈️</h3>
         <ul id="bucket" class="bucket"></ul>
 
         <div class="progress">
@@ -404,10 +429,9 @@
         </div>
       </div>
 
-      <!-- HISTORY -->
       <div class="glass card">
         <h3>Zgodovina 💌</h3>
-        <div id="history" class="history muted">Nalagam…</div>
+        <div id="history" class="history" style="color: var(--muted);">Nalagam…</div>
 
         <div class="history-actions" id="historyActions" style="display:none;">
           <button class="ghost-btn" id="toggleHistory">Pokaži več</button>
@@ -415,7 +439,7 @@
       </div>
     </div>
 
-    <div class="footer">made with ❤️</div>
+    <div class="footer">made by Rok ❤️</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -432,6 +456,9 @@
     const $msgMeta = document.getElementById("msgMeta");
     const $img = document.getElementById("img");
     const $imgWrap = document.getElementById("imgWrap");
+
+    const $moreLoveBtn = document.getElementById("moreLoveBtn");
+    const $loveExtra = document.getElementById("loveExtra");
 
     const $bucket = document.getElementById("bucket");
     const $barFill = document.getElementById("barFill");
@@ -553,39 +580,37 @@
         return;
       }
 
-$history.innerHTML = list.map(m => {
-  const hasImg = (m.image_url || "").trim().length > 0;
-  const time = new Date(m.created_at).toLocaleString("sl-SI");
+      $history.innerHTML = list.map(m => {
+        const imgUrl = (m.image_url || "").trim();
+        const hasImg = imgUrl.length > 0;
+        const date = new Date(m.created_at).toLocaleDateString("sl-SI", { dateStyle: "medium" });
 
-  if (hasImg) {
-    return `
-      <div class="history-item">
-        <div class="hpad">
-          <div class="history-text">${escapeHtml(m.text ?? "")}</div>
-        </div>
+        if (hasImg) {
+          return `
+            <div class="history-item">
+              <div class="hpad">
+                <div class="history-text">${escapeHtml(m.text ?? "")}</div>
+              </div>
 
-        <img class="history-img" src="${m.image_url.trim()}" alt="slika">
+              <img class="history-img" src="${imgUrl}" alt="slika">
 
-        <div class="hpad">
-          <div class="history-date-bottom">${time}</div>
-        </div>
-      </div>
-    `;
-  }
+              <div class="hpad">
+                <div class="history-date-bottom">${date}</div>
+              </div>
+            </div>
+          `;
+        }
 
-  // brez slike
-  return `
-    <div class="history-item">
-      <div class="hpad">
-        <div class="history-text">${escapeHtml(m.text ?? "")}</div>
-        <div class="history-date-bottom">${time}</div>
-      </div>
-    </div>
-  `;
-}).join("");
+        return `
+          <div class="history-item">
+            <div class="hpad">
+              <div class="history-text">${escapeHtml(m.text ?? "")}</div>
+              <div class="history-date-bottom">${date}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
 
-
-      // show/hide toggle
       if(historyCache.length > HISTORY_PREVIEW_COUNT){
         $historyActions.style.display = "flex";
         $toggleHistory.textContent = historyExpanded ? "Pokaži manj" : "Pokaži več";
@@ -685,6 +710,25 @@ $history.innerHTML = list.map(m => {
       }
 
       loadBucket();
+    });
+
+    const LOVE_MESSAGES = [
+      "OBOŽUJEM TE KAJA",
+      "I LOVE YOU BEBIIIII",
+      "YOU'RE MY MISSY",
+      "YOU+ME=CHUBBEERRSSSS",
+      "CAN'T WAIT TO MAKE YOU MY WIFEY"
+    ];
+
+    function pickRandom(arr){
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    $moreLoveBtn.addEventListener("click", () => {
+      const msg = pickRandom(LOVE_MESSAGES);
+      $loveExtra.textContent = msg;
+      $loveExtra.style.display = "block";
+      setFade($loveExtra);
     });
 
     function enableRealtime(){
