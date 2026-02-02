@@ -553,18 +553,37 @@
         return;
       }
 
-      $history.innerHTML = list.map(m => {
-        const hasImg = (m.image_url || "").trim().length > 0;
-        return `
-          <div class="history-item">
-            <div class="hpad">
-              <div class="history-text">${escapeHtml(m.text ?? "")}</div>
-              <div class="history-date-bottom">${new Date(m.created_at).toLocaleString("sl-SI")}</div>
-            </div>
-            ${hasImg ? `<img class="history-img" src="${m.image_url.trim()}" alt="slika">` : ``}
-          </div>
-        `;
-      }).join("");
+$history.innerHTML = list.map(m => {
+  const hasImg = (m.image_url || "").trim().length > 0;
+  const time = new Date(m.created_at).toLocaleString("sl-SI");
+
+  if (hasImg) {
+    return `
+      <div class="history-item">
+        <div class="hpad">
+          <div class="history-text">${escapeHtml(m.text ?? "")}</div>
+        </div>
+
+        <img class="history-img" src="${m.image_url.trim()}" alt="slika">
+
+        <div class="hpad">
+          <div class="history-date-bottom">${time}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // brez slike
+  return `
+    <div class="history-item">
+      <div class="hpad">
+        <div class="history-text">${escapeHtml(m.text ?? "")}</div>
+        <div class="history-date-bottom">${time}</div>
+      </div>
+    </div>
+  `;
+}).join("");
+
 
       // show/hide toggle
       if(historyCache.length > HISTORY_PREVIEW_COUNT){
