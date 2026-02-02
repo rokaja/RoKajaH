@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin ❤️</title>
+  <title>Admin R&K</title>
   <style>
     body { font-family:-apple-system, system-ui; margin:0; background:#0b0b0b; color:#fff; }
     .wrap { max-width:520px; margin:0 auto; padding:20px; display:grid; gap:12px; }
@@ -20,7 +20,6 @@
     button { width:100%; padding:12px 14px; border:0; border-radius:14px; background:#fff; color:#000; font-weight:700; cursor:pointer; }
     button:disabled { opacity:.6; cursor:not-allowed; }
     .muted { color:#bdbdbd; font-size:13px; }
-    .row { display:flex; gap:10px; align-items:center; }
     .pill { background:#222; border-radius:999px; padding:6px 10px; font-size:12px; }
   </style>
 </head>
@@ -120,7 +119,7 @@
         return;
       }
 
-      // image: najprej ročni URL, potem (če je izbrana datoteka) upload prevlada
+      // image: ročni URL ali upload (upload prevlada)
       let image_url = document.getElementById("image").value.trim() || null;
 
       const fileEl = document.getElementById("file");
@@ -136,7 +135,7 @@
         }
       }
 
-      // če pinned, odpni stare pinned (da je vedno samo eno “glavno”)
+      // če pinned, odpni prejšnje pinned
       if(pinned){
         const { error: unpinErr } = await sb.from("messages").update({ pinned:false }).eq("pinned", true);
         if(unpinErr) console.error("Unpin error:", unpinErr);
